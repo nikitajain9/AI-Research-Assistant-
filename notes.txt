@@ -1,0 +1,54 @@
+Retrieval-Augmented Generation (RAG) is an architectural pattern designed to optimize the output of Large Language Models (LLMs) by fetching relevant context from external, up-to-date data sources before generating a response.
+
+Instead of forcing a model to rely purely on the static factual knowledge it memorized during training, RAG provides the model with target reference materials at the exact moment a question is asked. This anchors the model’s answers in verifiable data and significantly mitigates hallucinations.
+
+---
+
+## 1. The Core Lifecycle of a RAG Pipeline
+
+A production-grade RAG system operates across two separate pipelines: the offline ingestion phase and the online query phase.
+
+### Phase 1: Knowledge Ingestion (Offline)
+
+Before a system can retrieve anything, proprietary data (such as internal wikis, PDFs, or customer tickets) must be cleaned, formatted, and stored.
+
+* **Document Parsing and Cleaning:** Raw data is stripped of formatting noise like boilerplate text, headers, footers, and redundant scripts.
+* **Chunking:** Large documents are too big to feed into search indexes effectively, so they are broken down into smaller, retrievable text units. Common approaches include fixed-token splitting or semantic chunking (which breaks text along natural topic shifts, section headers, or paragraph boundaries to preserve complete ideas).
+* **Vector Embedding:** Each text chunk is passed through an embedding model that translates the semantic meaning of the words into a high-dimensional mathematical coordinate (a vector). Chunks with similar conceptual meanings sit near one another in this space.
+* **Vector Storage and Indexing:** These generated vectors are stored inside a specialized vector database alongside their original raw text and metadata (such as document title, date, or author).
+
+### Phase 2: The Query & Retrieval Loop (Online)
+
+When an end-user submits a live question, the system coordinates an interactive retrieval sequence.
+
+* **Query Embedding:** The user's input question is converted into a vector using the exact same embedding model from the ingestion phase.
+* **Retrieval:** The database runs a similarity search to find text chunks whose coordinate representations sit closest to the user's question vector.
+* **Augmentation:** The top-ranked text chunks are fetched and stitched directly into the system prompt alongside the user's original question.
+* **Generation:** The LLM receives this combined text package. It reads the context chunks, isolates the necessary facts, and writes a grounded answer.
+
+---
+
+## 2. Advanced Retrieval Strategies
+
+Standard RAG struggles when questions are poorly written or when information is scattered across distinct documents. Advanced architectures deploy multi-stage logic to bypass these limitations.
+
+* **Hybrid Search:** This balances keyword and vector search. It pairs keyword retrieval (which catches exact alphanumeric IDs, product codes, or specific names) with vector search (which captures abstract concepts and meaning) to ensure high-accuracy document matching.
+* **Reranking:** Finding the top fifty documents via fast vector math is cheap but imprecise. Advanced pipelines use a secondary, highly precise model called a cross-encoder reranker to scrutinize the user’s query against each candidate text block simultaneously, bubbling the absolute best chunks to the very top.
+* **Query Transformation:** If a user writes a confusing question, an intermediate LLM call can rewrite it before it hits the database. Examples include generating hypothetical answers to search against, or breaking a multi-part question down into separate sub-queries.
+* **Contextual Retrieval:** To prevent text chunks from losing context when isolated from their parent document, systems prefix every individual chunk with a short, LLM-generated summary explaining the broader document topic before embedding it.
+
+---
+
+## 3. How RAG Systems Are Evaluated
+
+Because RAG is a composite architecture, evaluating system quality requires separating retrieval performance from generation quality.
+
+### Retrieval Performance Metrics
+
+* **Context Precision:** Measures whether the retrieved chunks are highly relevant to the question and if the most helpful information is ranked at the top of the context pile.
+* **Context Recall:** Assesses whether the system successfully gathered *all* the necessary information required to construct the answer, or if vital facts were left behind in the database.
+
+### Generation Quality Metrics
+
+* **Faithfulness (Groundedness):** Evaluates if every single claim made in the final output can be tracing back to the retrieved context chunks. If the model makes a claim not explicitly stated in the context, it fails faithfulness.
+* **Answer Relevance:** Checks whether the generated text actually answers the core question asked by the user, ensuring the model did not get distracted by irrelevant background text.
