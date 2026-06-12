@@ -18,5 +18,4 @@ final_answer = reviewer_agent(
     draft
 )
 
-print("\nFINAL ANSWER:\n")
-print(final_answer)
+print('Final Answer is \n',final_answer)

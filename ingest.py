@@ -1,27 +1,35 @@
 # Building a Vector store 
-
+import os
 from langchain_core.documents import Document
 from langchain_chroma import Chroma
-from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_text_splitters import MarkdownHeaderTextSplitter
 from langchain_huggingface import HuggingFaceEmbeddings
 
 with open('notes.txt','r') as f:
     text = f.read()
 
 docs = [Document(page_content=text)]
-splitter = RecursiveCharacterTextSplitter(
-    chunk_size = 100,
-    chunk_overlap = 20,
-    persist_directory="vectorstore",
+
+headers_to_split_on = [
+    ("#", "Header 1"),
+    ("##", "Header 2"),
+    ("###", "Header 3"),
+]
+
+splitter = MarkdownHeaderTextSplitter(
+    headers_to_split_on=headers_to_split_on
 )
 
-chunks = splitter.split_documents(docs)
+chunks = splitter.split_text(text)
 
-embedding = HuggingFaceEmbeddings(
-    model_name="sentence-transformers/all-MiniLM-L6-v2"
+embedding_model = HuggingFaceEmbeddings(
+    model_name="BAAI/bge-small-en-v1.5"
 )
 
 vector_store = Chroma.from_documents(
     documents = chunks,
-    embedding = embedding
+    embedding = embedding_model,
+    persist_directory="vectorstore"
 )
+
+print(vector_store._collection.count())
